@@ -1,0 +1,31 @@
+---
+title: "Assignment_Week1"
+author: "Viviana"
+date: '2022-02-28'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Assignment 1 
+## Viviana Vinci - Bioinformatics for Epigenetics 
+
+```{r}
+#install.packages(c("gsl","ggplot2"))
+# I already installed Bioconductor 
+
+#BiocManager::install(c("GenomicRanges", "rtracklayer", "EnrichedHeatmap", "AnnotationHub", "ensembldb", "edgeR", "esATAC", "sechm","genomation","Rsubread","Rfastp"))
+#install.packages("cowplot")
+#BiocManager::install("ETHZ-INS/epiwraps")
+
+```
+
+### I decided to comment the install commands so that R does not install those packages everytime I ran the code since it is only necessary once 
+
+```{r}
+
+library(epiwraps)
+sessionInfo()
+
+```
+
