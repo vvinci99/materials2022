@@ -1,0 +1,119 @@
+---
+title: "Assignment 2"
+author: "Viviana"
+date: '2022-03-07'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Assignment 2 
+## Viviana Vinci Bioiformatics for Genomics 
+
+The assignment for this week:
+
+Using AnnotationHub, find and download the following annotations data:
+
+-The mouse (Mus Musculus) EnsDb object, version 102, genome build GRCm38
+
+-The mouse genome sequence ( dna_sm ) in TwoBit/2bit format for GRCm38
+
+-The drosophila melanogaster genome sequence ( dna_sm ) in TwoBit/2bit format for BDGP6
+
+Using the mouse EnsDb object, find the following:
+
+-How many different ensembl gene IDs and gene symbols are there for protein-coding genes?
+
+-Plot the distribution (histogram) of how many exons protein-coding genes
+
+-Plot the distribution of the (spliced) length of protein-coding transcripts
+
+Name your markdown file assignment.Rmd, put it (along with the produced html) in the week02 folder of your repository, and push!
+
+
+```{r}
+
+suppressPackageStartupMessages({
+  library(AnnotationHub)
+  library(ensembldb)
+  library(GenomicRanges)
+  library(epiwraps)
+  library(shiny)
+})
+
+ah<- AnnotationHub()
+
+q1<- query(ah, c("Mus Musculus", "EnsDb", "102", "GRCm38"))
+head(q1) 
+#display(ah)
+
+#one object found = AH89211 
+MM_ens_GRCm38<- ah[["AH89211"]]
+MM_ens_GRCm38
+
+
+q2<- query(ah, c( "dna_sm","2bit", "GRCm38"))
+head(q2) 
+
+#display(ah)
+
+dna_2bit_GRCm38<- ah[["AH49775"]]
+dna_2bit_GRCm38
+
+q3<- query(ah, c("Drosophila melanogaster", "dna_sm", "2bit", "BDGP6"))
+head(q3)
+
+#display(ah)
+
+
+# q3[rev(order(as.Date(q3$dataprovider, format="%Y-%m-%d")))]
+
+DM_dna_2bit_BDGP6<-ah[["AH68180"]]
+DM_dna_2bit_BDGP6
+
+```
+
+
+
+```{r}
+
+MM_txs <- transcripts(MM_ens_GRCm38, columns=c("tx_id", "tx_biotype", "gene_id", "gene_name"), filter= GenebiotypeFilter("protein_coding"))
+MM_txs
+#Number of unique gene IDs
+
+length(unique(MM_txs$gene_id))#22287
+
+#Number of unique Gene Names 
+
+length(unique(MM_txs$gene_name))#21964
+
+#Distribution of exons protein coding genes 
+
+exs_MM<- exonsBy(MM_ens_GRCm38, column=c("tx_id", "tx_biotype", "gene_id", "gene_name"), filter=TxBiotypeFilter("protein_coding"))
+exs_MM
+
+nexs_MM<- lengths(exs_MM)
+hist(nexs_MM, xlim=c(0,100), breaks = 300, col="red")
+
+#Distribution of Gene Lengths 
+
+ranges_MM<- exonsBy(MM_ens_GRCm38, column=c("exon_seq_start", "exon_seq_end", "gene_id", "gene_name"), filter=TxBiotypeFilter("protein_coding"))
+
+
+ranges_list<-width(ranges_MM)
+
+sum_ranges<-sapply(ranges_list,sum)
+
+hist(sum_ranges,main="Distribution of Protein-Coding Transcripts Length", breaks= 500, xlim = c(0,20000), col="blue")
+
+
+
+      
+
+
+```
+
