@@ -1,0 +1,212 @@
+---
+title: "Chip_p300_mESC"
+author: "Viviana"
+date: '2022-03-23'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Assignment 3 and 4 
+
+## Week 3 
+
+1. Download a mouse ChIPseq dataset (see suggestion below)
+2. Process it from the raw data, obtaining:
+bam file, along with number and percentage of mapped reads
+bigwig file
+peaks
+3. How many peaks do you find?
+4. Plot the signal round one of the peaks
+
+
+```{r}
+suppressPackageStartupMessages({
+  library(AnnotationHub)
+  library(Rsubread)
+  library(rtracklayer)
+  library(Biostrings)
+  library(Rfastp)
+  library(epiwraps)
+})
+ah <- AnnotationHub()
+
+
+```
+
+
+```{r, eval=FALSE}
+
+dir.create("raw")
+options(timeout=1800)
+download.file("https://www.encodeproject.org/files/ENCFF001LJN/@@download/ENCFF001LJN.fastq.gz" , dest="raw/p300.fastq.gz")
+
+```
+
+
+
+```{r, eval=FALSE}
+dir.create("rfastp.trimmed")
+qc <- Rfastp::rfastp("raw/p300.fastq.gz", outputFastq="rfastp.trimmed/p300", 
+                     maxNfilter=0, thread=4, overrepresentationAnalysis=TRUE)
+```
+
+
+
+```{r, eval=FALSE}
+ 
+genome <- ah[["AH49772"]]
+#AH53222 ensbd 
+#AH49772 Two bits 
+dir.create("GRCm38_genome")
+
+export(import.2bit(genome), "GRCm38_genome/genome.fasta.gz", compress=TRUE)
+
+Rsubread::buildindex("GRCm38_genome/rsubread", reference="GRCm38_genome/genome.fasta.gz")
+```
+
+
+
+```{r, eval=FALSE}
+dir.create("aligned")
+align.stats <- Rsubread::align(index="GRCm38_genome/rsubread", type="dna",
+                               output_file="aligned/p300.bam",
+                               readfile1="rfastp.trimmed/p300_R1.fastq.gz", 
+                               nthreads=4, sortReadsByCoordinates=TRUE)
+align.stats
+```
+
+
+
+
+```{r}
+
+ensdb <- ah[["AH89211"]]
+plotSignalTracks(list("aligned/p300.bam"), region="Atf3", ensdb=ensdb, tyranscripts= "full")
+```
+
+
+```{r, eval=FALSE}
+#BiocManager::install("MACSr")
+library(MACSr)
+dir.create("peaks")
+
+download.file("https://www.encodeproject.org/files/ENCFF460EOA/@@download/ENCFF460EOA.bed.gz", "peaks/p300.bed.gz")
+
+
+```
+
+
+```{r, eval=FALSE}
+dir.create("tracks2")
+#bam2bw("aligned/p300.bam", "tracks/p300_full.bw", binWidth=1, extend=50, scaling=TRUE)
+#bam2bw("aligned/p300.bam", "tracks/p300.bw", binWidth=10, extend=50, scaling=TRUE)
+download.file("https://www.encodeproject.org/files/ENCFF552AJY/@@download/ENCFF552AJY.bigWig", "tracks2/p300.bw")
+
+```
+
+
+
+```{r}
+p300 <- import("peaks/p300.bed.gz", format="NarrowPeak")
+plotSignalTracks(list(signal="tracks2/p300.bw", peaks=p300),region=p300[1], ensdb=ensdb)
+```
+
+
+
+##Week 4
+
+Complete last week’s assignment
+-Find and download the peak-level data (i.e. bed-like format) for the following histone modifications in mouse embryonic stem cells (mESC) from ENCODE:
+
+H3K4me3, H3K4me1, H3K27ac, and H3K27me3
+
+-Of the p300 peaks you identified last week, what proportion overlap each of the marks?
+Please make sure that you name your final file assignment.html !
+
+
+```{r , eval=FALSE}
+
+# downlowad peaks and tracks 
+# H3K27ac
+download.file("https://www.encodeproject.org/files/ENCFF274UIB/@@download/ENCFF274UIB.bed.gz", "peaks/H3K27ac.bed.gz")
+download.file("https://www.encodeproject.org/files/ENCFF121THA/@@download/ENCFF121THA.bigWig", "tracks/H3K27ac.bw")
+
+
+# H3K27me3
+download.file("https://www.encodeproject.org/files/ENCFF008XKX/@@download/ENCFF008XKX.bed.gz", "peaks/H3K27me3.bed.gz")
+download.file("https://www.encodeproject.org/files/ENCFF160FEV/@@download/ENCFF160FEV.bigWig", "tracks/H3K27me3.bw")
+
+
+# H3K4me1
+download.file("https://www.encodeproject.org/files/ENCFF333IJH/@@download/ENCFF333IJH.bed.gz", "peaks/H3K4me1.bed.gz")
+download.file("https://www.encodeproject.org/files/ENCFF016YZA/@@download/ENCFF016YZA.bigWig", "tracks/H3K4me1.bw")
+
+
+# H3K4me3
+download.file("https://www.encodeproject.org/files/ENCFF247GVM/@@download/ENCFF247GVM.bed.gz", "peaks/H3K4me3.bed.gz")
+download.file("https://www.encodeproject.org/files/ENCFF611GSQ/@@download/ENCFF611GSQ.bigWig", "tracks/H3K4me3.bw")
+
+
+
+
+```
+
+
+```{r}
+k27ac <- import("peaks/H3K27ac.bed.gz", format="NarrowPeak")
+
+k27me3 <- import("peaks/H3K27me3.bed.gz", format="NarrowPeak")
+
+k4me1 <- import("peaks/H3K4me1.bed.gz", format="NarrowPeak")
+
+k4me3 <- import("peaks/H3K4me3.bed.gz", format="NarrowPeak")
+
+```
+
+
+
+
+
+```{r}
+#to download the peaks 
+
+
+
+
+head(p300)
+
+#to change format of seq name 
+# number of  peaks 
+length(p300) #28341
+length(k27ac)#49716
+length(k27me3)#12621
+length(k4me1)#85881
+length(k4me3)#52499
+
+# how many oeaks overlap 
+#H3K27ac 
+peakOverlap_k27ac<- overlapsAny(p300, k27ac)
+table(peakOverlap_k27ac)#14699 
+
+#H3K27me3 
+peakOverlap_k27me3<- overlapsAny(p300, k27me3)
+table(peakOverlap_k27me3)#82
+
+#H3K4me1
+peakOverlap_k4me1<- overlapsAny(p300, k4me1)
+table(peakOverlap_k4me1)#7919
+
+
+#H3K4me3
+peakOverlap_k4me3<- overlapsAny(p300, k4me3)
+table(peakOverlap_k4me3)#10341
+
+
+
+
+
+```
+
+
+Comment: Finally I was able to solve the problem I was having with the peak download, now everything seemed to work well. 
