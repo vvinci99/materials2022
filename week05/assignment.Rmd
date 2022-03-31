@@ -1,0 +1,105 @@
+---
+title: "assignment 5"
+author: "Viviana"
+date: '2022-03-31'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r}
+suppressPackageStartupMessages({
+  library(AnnotationHub)
+  library(ensembldb)
+  library(GenomicRanges)
+  library(epiwraps)
+  library(rtracklayer)
+  library(ggplot2)
+})
+ah <- AnnotationHub(localHub=TRUE)
+ensdb <- ah[["AH89211"]]
+```
+
+
+
+
+```{r, eval=FALSE}
+dir.create("peaks")
+dir.create("tracks")
+options(timeout=1800)
+
+# H3K27me3 mESC 
+download.file("https://www.encodeproject.org/files/ENCFF008XKX/@@download/ENCFF008XKX.bed.gz", "peaks/H3K27me3.bed.gz")
+download.file("https://www.encodeproject.org/files/ENCFF160FEV/@@download/ENCFF160FEV.bigWig", "tracks/H3K27me3.bw")
+
+# H3K4me3 mESC 
+download.file("https://www.encodeproject.org/files/ENCFF247GVM/@@download/ENCFF247GVM.bed.gz", "peaks/H3K4me3.bed.gz")
+download.file("https://www.encodeproject.org/files/ENCFF611GSQ/@@download/ENCFF611GSQ.bigWig", "tracks/H3K4me3.bw")
+
+# neuronal tube H3K27me3
+download.file("https://www.encodeproject.org/files/ENCFF717PHU/@@download/ENCFF717PHU.bed.gz", "peaks/nH3K27me3.bed.gz")
+download.file("https://www.encodeproject.org/files/ENCFF101BRJ/@@download/ENCFF101BRJ.bigWig", "tracks/nH3K27me3.bw")
+
+# neuronal tube H3K4me3
+download.file("https://www.encodeproject.org/files/ENCFF306PYA/@@download/ENCFF306PYA.bed.gz", "peaks/nH3K4me3.bed.gz")
+download.file("https://www.encodeproject.org/files/ENCFF380SYY/@@download/ENCFF380SYY.bigWig", "tracks/nH3K4me3.bw")
+
+
+```
+
+
+```{r}
+
+#mESC
+k27me3 <- import("peaks/H3K27me3.bed.gz", format="NarrowPeak")
+k4me3 <- import("peaks/H3K4me3.bed.gz", format="NarrowPeak")
+
+#neuronal Tube 
+nk27me3 <- import("peaks/nH3K27me3.bed.gz", format="NarrowPeak")
+nk4me3 <- import("peaks/nH3K4me3.bed.gz", format="NarrowPeak")
+
+# Counting the overlaps of the same cell type 
+overlap_mESC<- sum(overlapsAny(k27me3, k4me3))#3820
+overlap_neuronal<- sum (overlapsAny(nk27me3, nk4me3)) #6468
+
+#Making a subset of the mESC marks that overlap 
+bivalent_mESC<- subsetByOverlaps(k27me3,k4me3)
+head(bivalent_mESC)
+#checking is the right number 
+length(bivalent_mESC)#3820
+#Making a subset of the neuronal cell marks that overlap 
+bivalent_neuronal<- subsetByOverlaps(nk27me3,nk4me3)
+head(bivalent_neuronal)
+length(bivalent_neuronal)#6468
+
+#checking which bivalent domains from mESC overalp with each mark in neuronal cells, and with the bivalent domanins of the neuronal cell 
+sum(overlapsAny(bivalent_mESC, nk27me3)) #2603 
+sum(overlapsAny(bivalent_mESC, nk4me3)) #3517
+
+sum(overlapsAny(bivalent_mESC, bivalent_neuronal))#2546
+
+
+# the bivalent domains increase in the neural tube as cells start to differentiate  
+
+
+listOfRegions <- list( k4me3=k4me3,  k27me3=k27me3, nk27me3=nk27me3, nk4me3=nk4me3)
+regionOverlaps(listOfRegions)
+regionUpset(listOfRegions)
+
+
+# I am doing this juts to check how the signal looks like and if the code is working for me 
+
+k27me3_chr1 <- k27me3[seqnames(k27me3)=="chr1"]
+tracks <- list.files("tracks", full=TRUE)
+names(tracks) <- gsub("\\.bw","",basename(tracks))
+ml <- signal2Matrix(tracks, regions=k27me3_chr1, extend=5000, w=100)
+plotEnrichedHeatmaps(ml, trim=0.9)
+
+
+```
+
+
+To complete this assignment it took me way less than the previous one, but this is because in the previous assignment I had a problem with obtaining the peaks that took me so much time,
+
+since I found out how to retrieve the peaks this assignment took me way less, just around 2 hrs total 
