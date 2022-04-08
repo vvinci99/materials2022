@@ -1,0 +1,165 @@
+---
+title: "assignment 6"
+author: "Viviana"
+date: '2022-04-06'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Assignment 6 
+
+1. Choose a transcription factor, e.g. CREB1, REST, GATA5, EGR1, GCR (or any of your choice that has a motif and available ChIPseq data)
+2. Download the (e.g. Mouse) peaks for that factor (whatever cell type)
+3. Identify the instances of the factor’s motif
+
+Answer the following questions:
+a. Of all the peaks, what proportion contains a motif for the factor? (Expected form of an answer: "of the XX peaks, XX (XX%) contain a motif")
+b. Of all instances of that motif in the genome, what proportion is bound by the factor (i.e. has a peak)? (Expected form of an answer: "of the XX motif instances, XX (XX%) overlap a peak")
+
+Don't forget to render your markdown and push it as assignment.html !
+
+```{r}
+suppressPackageStartupMessages({
+  library(GenomicRanges)
+  library(memes)
+  library(Biostrings)
+  library(AnnotationHub)
+  library(MotifDb)
+  library(universalmotif)
+  library(PWMEnrich)
+  library(ggplot2)
+})
+```
+
+I will use Gata1 on mm10 data on G1E cell line  
+
+```{r}
+download.file("https://www.encodeproject.org/files/ENCFF978KGB/@@download/ENCFF978KGB.bed.gz", "creb_ENCFF978KGB.bed.gz")
+peaks <- rtracklayer::import("creb_ENCFF978KGB.bed.gz", format="NarrowPeak")
+seqlevelsStyle(peaks) <- "Ensembl"
+peaks_chr1 <- peaks[seqnames(peaks)=="1"]
+
+```
+
+
+
+
+```{r}
+
+peak_centers <- resize(peaks_chr1, fix="center", width=100)
+# we get the genome sequence:
+ah <- AnnotationHub(localHub=FALSE)
+
+genome <- ah[["AH49723"]]
+# we get the sequences corresponding to the peak centers:
+peak_seqs <- memes::get_sequence(peak_centers, genome)
+length(peak_centers)
+length(peak_seqs)
+peak_seqs
+
+```
+
+
+
+
+
+```{r}
+
+#gadem <- rGADEM::GADEM(peak_seqs, genome=genome)
+
+# we search for "Gata1" in the motif database
+motifs <- query(MotifDb, "CREB1")
+head(motifs)
+# there are several matching motifs:
+names(motifs)
+# we select one:
+motif <- motifs[["Hsapiens-jaspar2016-CREB1-MA0018.1"]]
+# we visualize it:
+view_motifs(motif)
+
+
+```
+
+
+
+
+```{r}
+#' findMotifInstances
+#'
+#' A wrapper around TFBSTools for scanning motif occurence, handling the 
+#' coordinate conversion as `memes` does.
+#' 
+#' @param seqs A set of sequences, e.g. `DNAStringSet`, optionally with 
+#'   coordinate as names to enable conversion.
+#' @param motif A motif, in any format recognized by `universalmotif`
+#' @param keepMatchedSeq Logical; whether to keep the matched sequence.
+#' @param ... Passed to `TFBSTools::searchSeq`; can for instance be used to set
+#'   the number of threads to use, e.g. with `mc.cores=2`
+#'
+#' @return A `GRanges` object
+findMotifInstances <- function(seqs, motif, keepMatchedSeq=FALSE, ...){
+  motif <- universalmotif::convert_motifs(motif, "TFBSTools-PWMatrix")
+  x <- suppressWarnings(TFBSTools::searchSeq(motif, subject=seqs))
+  peaks <- strsplit(gsub("-",":",names(seqs)), ":")
+  if(all(lengths(peaks)==3)){ # convert relative coordinates to absolute
+    chrs <- sapply(peaks,FUN=function(x) x[1])
+    offsets <- sapply(peaks,FUN=function(x) as.integer(x[2]))-1L
+    i <- rep(seq_along(x),lengths(x))
+    return(GRanges(chrs[i], 
+                   IRanges(offsets[i]+as.integer(unlist(lapply(x, start))),
+                           offsets[i]+as.integer(unlist(lapply(x, end)))),
+                   strand=unlist(lapply(x, strand)),
+                   score=as.numeric(unlist(lapply(x, FUN=function(x) score(x))))
+                   ))
+  }
+  x <- as(x, "GRanges")
+  score(x) <- x$absScore
+  keepFields <- c("score","relScore")
+  if(keepMatchedSeq) keepFields <- c(keepFields, "siteSeqs")
+  mcols(x) <- mcols(x)[,intersect(colnames(mcols(x)), keepFields)]
+  x
+}
+```
+
+
+
+```{r}
+moi2 <- findMotifInstances(peak_seqs, motif, mc.cores=2)
+head(moi2)
+
+length(peak_seqs)#2380
+length(moi2)#2015
+```
+
+
+
+
+```{r}
+
+overlaps<-overlapsAny(peak_centers, moi2)
+a<-table(overlaps) # true overlaps 1364 
+
+length(peak_centers)#2015
+
+prop.table(a)
+
+#true 0.6769231 
+
+
+overlaps2<-overlapsAny( moi2, peak_centers)
+b<-table(overlaps2) # true overlaps 1364 
+length(moi2)#2380
+
+
+
+```
+
+
+
+Answer to the questions:
+
+a. Of the 2015 peaks of CREB1 in chromosome 1, 1364 (67.7%) contains the selected motif for the factor 
+
+b. The selected motif for CREB1 has 2380 instances in chromosome 1, of those 2380 (100%) overlap with a peak for CREB1 binding. The peak centers are lower than the motif instances, this is possible since it could be that there are multiple motif instances in the sampe peak_seq. And they are all bound to the factor. From this data it seems that there are no motif instances that are not bound by CREB1 in chromosome 1 
+
