@@ -1,0 +1,160 @@
+---
+title: "assignment7"
+author: "Viviana"
+date: '2022-04-28'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+```{r}
+suppressPackageStartupMessages({
+  library(epiwraps)
+  library(AnnotationHub)
+  library(MotifDb)
+  library(memes)
+  library(universalmotif)
+  library(ensembldb)
+  library(ggplot2)
+})
+ah <- AnnotationHub(localHub=TRUE)
+ensdb <- ah[["AH89211"]] #mouse ensembbd oject 
+```
+
+
+## Download the data
+
+```{r, eval=FALSE}
+download.file("https://ethz-ins.org/content/w7/atac.chr19.bam", "atac.chr19.bam")
+download.file("https://ethz-ins.org/content/w7/atac.chr19.bam.bai", "atac.chr19.bam.bai")
+
+tracks <- c("full_cuts.bw", "NF_cov.bw", "NF_cuts.bw", "mono_cov.bw", "mono_cuts.bw")
+for(f in tracks){
+  download.file(paste0("https://ethz-ins.org/content/w7/",f), f)
+}
+```
+
+
+## Preparing tracks
+
+```{r}
+bam <- "atac.chr19.bam"
+
+fragSizesDist(bam)
+
+# create a track using all fragments, computing the coverage at each position (and force Ensembl naming), while creating the tracks we converto to ensmble
+bam2bw(bam, output_bw = "full_cov.bw", paired=TRUE, binWidth=1L, forceSeqlevelsStyle = "Ensembl") 
+# create a track using all fragments, but computing the number of cuts/insertion sites at each position
+bam2bw(bam, output_bw = "full_cuts.bw", paired=TRUE, binWidth=1L, type="ends", forceSeqlevelsStyle = "Ensembl")
+# create a track using only nucleosome-free fragments, computing coverage
+bam2bw(bam, output_bw = "NF_cov.bw", paired=TRUE, binWidth=1L, minFragLength=30, 
+       maxFragLength=115, forceSeqlevelsStyle = "Ensembl")
+# create a track using only nucleosome-free fragments, computing cuts
+bam2bw(bam, output_bw = "NF_cuts.bw", paired=TRUE, binWidth=1L, minFragLength=30,
+       maxFragLength=115, type="ends", forceSeqlevelsStyle = "Ensembl")
+# create a track using only mono-nucleosome fragments, computing coverage
+bam2bw(bam, output_bw = "mono_cov.bw", paired=TRUE, binWidth=1L, minFragLength=130,
+       maxFragLength=220, forceSeqlevelsStyle = "Ensembl")
+# create a track using only mono-nucleosome fragments, computing cuts
+bam2bw(bam, output_bw = "mono_cuts.bw", paired=TRUE, binWidth=1L, minFragLength=130,
+       maxFragLength=220, type="ends", forceSeqlevelsStyle = "Ensembl")
+```
+
+
+## Obtaining the sites with a REST motif
+
+```{r}
+# get REST sites
+motif_REST <- query(MotifDb, c("REST","Mus"))[[1]]
+genome <- ah[["AH68356"]]
+# get the sequence for chr19:
+chr19 <- GRanges("19", IRanges(1L,seqlengths(genome)["19"]))
+chr19 <- setNames(getSeq(genome, chr19), "19")
+#Without meme 
+moi_REST<-findMotifInstances(chr19,motif_REST)
+# keep only motifs with a high score
+moi2_REST <- moi_REST[moi_REST$score>15]
+length(moi2_REST)
+
+```
+
+## Plotting signal around the motif occurences
+
+```{r}
+# we prepare the list of tracks
+tracks <- c("Full cuts"="full_cuts.bw", "NF coverage"="NF_cov.bw", "NF cuts"="NF_cuts.bw", "Mono cov"="mono_cov.bw", "Mono cuts"="mono_cuts.bw")
+# extract signals around the motif occurences
+
+sm_REST <- signal2Matrix(tracks, moi2_REST, w=5, extend=500)
+
+saveRDS(sm_REST, file="signal_around_strong_REST_motifs.rds")
+
+# plot the signals:
+plotEnrichedHeatmaps(sm_REST, trim=0.95)
+# we renormalize using border backgrounds, assume that background noise is the same 
+
+smb_REST <- renormalizeBorders(sm_REST)
+plotEnrichedHeatmaps(smb_REST, trim=0.95) 
+ 
+```
+
+
+## Plotting footprint
+
+We could use our standard functions:
+
+```{r}
+d <- meltSignals(smb_REST)
+ggplot(d, aes(position, mean, colour=sample)) + geom_line(size=1.2)
+```
+
+
+## Obtaining the sites with a GCR motif
+
+```{r}
+# get GRC sites
+motif2 <- query(MotifDb, c("GRC","Mus"))[[1]]
+genome <- ah[["AH68356"]]
+# get the sequence for chr19:
+chr19 <- GRanges("19", IRanges(1L,seqlengths(genome)["19"]))
+chr19 <- setNames(getSeq(genome, chr19), "19")
+
+
+#Without meme 
+moi_GRC<-findMotifInstances(chr19,motif2)
+# keep only motifs with a high score
+moi2_GRC <- moi_GRC[moi_GRC$score>15]
+length(moi2_GRC)
+
+```
+
+## Plotting signal around the motif occurences
+
+```{r}
+# we prepare the list of tracks
+tracks <- c("Full cuts"="full_cuts.bw", "NF coverage"="NF_cov.bw", "NF cuts"="NF_cuts.bw", "Mono cov"="mono_cov.bw", "Mono cuts"="mono_cuts.bw")
+# extract signals around the motif occurences
+
+sm_GRC <- signal2Matrix(tracks, moi2_GRC, w=5, extend=500)
+
+saveRDS(sm_GRC, file="signal_around_strong_GRC_motifs.rds")
+
+
+# plot the signals:
+plotEnrichedHeatmaps(sm_GRC, trim=0.95)
+
+smb_GRC <- renormalizeBorders(sm_GRC)
+plotEnrichedHeatmaps(smb_GRC, trim=0.95) 
+```
+
+
+## Plotting footprint
+
+We could use our standard functions:
+
+```{r}
+d <- meltSignals(smb_GRC)
+ggplot(d, aes(position, mean, colour=sample)) + geom_line(size=1.2)
+```
