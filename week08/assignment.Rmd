@@ -1,0 +1,39 @@
+---
+title: "assignment 8"
+author: "Viviana"
+date: '2022-05-05'
+output: html_document
+---
+
+# Assignment 8 
+
+Until next week, come up with a preliminary plan for your project, summarizing:
+
+- What is the topic?
+- What data will you be using?
+- What are the analyses you wish to reproduce, or the questions you wish to answer?
+This is not a final plan, but the start of a discussion!
+
+Write that up in a Rmarkdown that you can upload to your repository.
+
+# Response 
+
+- What is the topic? 
+
+For my project I am planning to reproduce part of the Data generated in the Bonev. et all 2017 Cell[1] paper. 
+
+This paper explores the 3D genome structure and the formation of Topologically associated Domains during neuronal development. 
+
+Even though the paper mainly focuses on Hi-C maps in three different cell lines. I will be focusing on the Chip data that they generated and repeate the analysis they did. 
+
+- What data will you be using? 
+
+I will be using the data they uploaded on GEO of the CTCF, Ring1B, H3K4me1, H3K4me3, H3K9me3, H3K27ac, H3K27me3, H3K36me3 on 3 (some cases 2) cell types (ES, NPC, CN)
+
+- What are the analyses you wish to reproduce, or the questions you wish to answer?
+
+I wish to reproduce their ChipSeq data and to look at how those factors change thoughout neuronal cell differentiation 
+
+
+
+[1] Bonev, Boyan et al. “Multiscale 3D Genome Rewiring during Mouse Neural Development.” Cell vol. 171,3 (2017): 557-572.e24. doi:10.1016/j.cell.2017.09.043
