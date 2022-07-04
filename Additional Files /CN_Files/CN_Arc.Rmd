@@ -1,0 +1,75 @@
+---
+title: "CN_Arc"
+author: "Viviana"
+date: '2022-07-02'
+output: html_document
+---
+
+
+
+```{r, include=FALSE}
+suppressPackageStartupMessages({
+  library(AnnotationHub)
+  library(Rsubread)
+  library(rtracklayer)
+  library(Biostrings)
+  library(Rfastp)
+  library(epiwraps)
+  library(GEOquery)
+  library(GenomicRanges)
+  library(IRanges)
+  library(ChIPpeakAnno)
+  library(ggplot2)
+  library(gridExtra)
+
+})
+
+```
+
+
+```{r, include=FALSE}
+
+tracks_CN_CTCF<- rtracklayer::import('/Users/vivianavinci/Library/Mobile Documents/com~apple~CloudDocs/Desktop/_ETH/SP 2022/BIOINFORMATICS/Project /CN/tracks/GSE96107_CN_CTCF.bw')
+
+tracks_CN_H3K27ac<-rtracklayer::import('CN/tracks/GSE96107_CN_H3K27ac.bw')
+
+tracks_CN_H3K9me3<-rtracklayer::import('CN/tracks/GSE96107_CN_H3K9me3.bw')
+
+peaks_CN_CTCF<- rtracklayer::import('/Users/vivianavinci/Library/Mobile Documents/com~apple~CloudDocs/Desktop/_ETH/SP 2022/BIOINFORMATICS/Project /CN/peaks/GSE96107_CN_CTCF.IDR0.05.filt.narrowPeak')
+
+
+peaks_CN_H3K27ac <- rtracklayer::import('CN/peaks/GSE96107_CN_H3K27ac.IDR0.05.filt.narrowPeak')
+
+#download.file("https://www.encodeproject.org/files/ENCFF356LFX/@@download/ENCFF356LFX.bed.gz" , dest="CN/peaks/CN_H3K9me3.bed.gz")
+peaks_CN_H3K9me3<- rtracklayer::import('CN/peaks/CN_H3K9me3.bed.gz')
+
+```
+
+
+
+```{r, collapse=TRUE, warning=FALSE}
+library(Gviz)
+
+ideogram<- IdeogramTrack("chr15", "mm10")
+axis<- GenomeAxisTrack()
+
+cover_track_CTCF_CN<-DataTrack(tracks_CN_CTCF, window= 100000,type= "h", name="CTCF", col="blue", ylim = c(0,2))
+cover_track_H3K27ac_CN<-DataTrack(tracks_CN_H3K27ac, window= 100000,type= "h", name="H3K27ac", col="purple", ylim = c(0,2))
+cover_track_H3K9me3_CN<-DataTrack(tracks_CN_H3K9me3, window= 100000,type= "h", name="H3K9me3", col="pink", ylim = c(0,2) )
+
+peak_track_CTCF_CN<-AnnotationTrack(peaks_CN_CTCF,name="Peaks")
+
+peak_track_H3K27ac_CN<-AnnotationTrack(peaks_CN_H3K27ac,name="Peaks")
+peak_track_H3K9me3_CN<-AnnotationTrack(peaks_CN_H3K9me3,name="Peaks")
+
+library("TxDb.Mmusculus.UCSC.mm10.knownGene")
+tx<-GeneRegionTrack(TxDb.Mmusculus.UCSC.mm10.knownGene ,chromosome = "chr15",start  = 74600000, end= 74690000, name="Genes")
+
+tracks_list_CN<-list(ideogram,cover_track_CTCF_CN,peak_track_CTCF_CN, cover_track_H3K27ac_CN, peak_track_H3K27ac_CN, cover_track_H3K9me3_CN,peak_track_H3K9me3_CN, tx, axis)
+```
+
+
+```{r ChipSeq around Arc in cortical Neurons, fig.cap="**Figure x:** ChipSeq around Arc in cortical Neurons, CTCF coverage tracks(blue), H3K27ac coverage tracks(light blue), H3K9me3 coverage tracks (dark blue)"}
+
+plotTracks(tracks_list_CN,from = 74600000, to= 74690000, chromosome = "chr15",main= "ChipSeq around Arc in cortical Neurons",cex.main=1.5)
+```

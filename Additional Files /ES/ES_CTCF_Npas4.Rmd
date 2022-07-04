@@ -1,0 +1,69 @@
+---
+title: "ES_CTCF_Npas4"
+author: "Viviana"
+date: '2022-07-01'
+output: html_document
+---
+
+
+#Analysis of CTCF binding in Npas4 in Embrionic Cells 
+
+```{r}
+
+suppressPackageStartupMessages({
+  library(AnnotationHub)
+  library(Rsubread)
+  library(rtracklayer)
+  library(Biostrings)
+  library(Rfastp)
+  library(epiwraps)
+  library(GEOquery)
+  library(GenomicRanges)
+  library(IRanges)
+  library(ChIPpeakAnno)
+  library(ggplot2)
+  library(gridExtra)
+  library(profileplyr)
+
+})
+
+BiocManager::install("profileplyr")
+
+
+```
+
+```{r}
+getwd()
+
+tracks_ES_CTCF<- rtracklayer::import("ES/tracks/GSE96107_ES_CTCF.bw")
+```
+
+
+```{r}
+peaks_ES_CTCF<- rtracklayer::import('ES/peaks/GSE96107_ES_CTCF.IDR0.05.filt.narrowPeak')
+
+
+```
+
+
+
+
+
+
+```{r}
+
+
+library(Gviz)
+
+ideogram<- IdeogramTrack("chr19", "mm10")
+axis<- GenomeAxisTrack()
+
+cover_track_CTCF_ES<-DataTrack(tracks_ES_CTCF, window= 100000,type= "h", name="Coverage")
+peaks_chr19<- peaks_ES_CTCF[seqnames(peaks_ES_CTCF)=="chr19"]
+peak_track_CTCF_ES<-AnnotationTrack(peaks_chr19,name="Peaks")
+
+library("TxDb.Mmusculus.UCSC.mm10.knownGene")
+tx<-GeneRegionTrack(TxDb.Mmusculus.UCSC.mm10.knownGene ,chromosome = "chr19",start  = 4900000, end= 5004439, name="Genes")
+
+plot_ES_Npas4<-plotTracks(list(ideogram,cover_track_CTCF_ES, peak_track_CTCF_ES,tx, axis),from = 4900000, to= 5004439, chromosome = "chr19",main= "CTCF binding around Npas4 in ES", cex.main=1.5)
+```

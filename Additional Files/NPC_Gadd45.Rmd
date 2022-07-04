@@ -1,0 +1,92 @@
+---
+title: "NPC_Gadd45y"
+author: "Viviana"
+date: '2022-07-02'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r, include=FALSE}
+suppressPackageStartupMessages({
+  library(AnnotationHub)
+  library(Rsubread)
+  library(rtracklayer)
+  library(Biostrings)
+  library(Rfastp)
+  library(epiwraps)
+  library(GEOquery)
+  library(GenomicRanges)
+  library(IRanges)
+  library(ChIPpeakAnno)
+  library(ggplot2)
+  library(gridExtra)
+
+})
+
+```
+
+
+```{r, include=FALSE}
+
+tracks_NPC_CTCF<- rtracklayer::import("NPC /tracks/GSE96107_NPC_CTCF.bw")
+
+tracks_NPC_H3K27ac<- rtracklayer::import('NPC /tracks/GSE96107_NPC_H3K27ac.bw')
+
+tracks_NPC_H3K9me3<- rtracklayer::import('NPC /tracks/GSE96107_NPC_H3K9me3.bw')
+
+peaks_NPC_CTCF<- rtracklayer::import('NPC /peaks/GSE96107_NPC_CTCF.IDR0.05.filt.narrowPeak')
+
+
+peaks_NPC_H3K27ac <- rtracklayer::import('NPC /peaks/GSE96107_NPC_H3K27ac.IDR0.05.filt.narrowPeak')
+
+
+
+#download.file("https://www.encodeproject.org/files/ENCFF719LDJ/@@download/ENCFF719LDJ.bed.gz" , dest="NPC /peaks/NPC_H3K9me3.narrowPeak")
+
+peaks_NPC_H3K9me3<- rtracklayer::import('/Users/vivianavinci/Library/Mobile Documents/com~apple~CloudDocs/Desktop/_ETH/SP 2022/BIOINFORMATICS/Project /NPC /peaks/NPC_H3K9me3.narrowPeak')
+
+```
+
+
+
+```{r, collapse=TRUE, warning=FALSE}
+library(Gviz)
+
+ideogram<- IdeogramTrack("chr13", "mm10")
+axis<- GenomeAxisTrack()
+
+cover_track_CTCF_NPC<-DataTrack(tracks_NPC_CTCF, window= 100000,type= "h", name="CTCF", col="blue")
+cover_track_H3K27ac_NPC<-DataTrack(tracks_NPC_H3K27ac, window= 100000,type= "h", name="H3K27ac", col="purple")
+cover_track_H3K9me3_NPC<-DataTrack(tracks_NPC_H3K9me3, window= 100000,type= "h", name="H3K9me3", col="pink", ylim = c(0,2) )
+
+peak_track_CTCF_NPC<-AnnotationTrack(peaks_NPC_CTCF,name="Peaks")
+peak_track_H3K27ac_NPC<-AnnotationTrack(peaks_NPC_H3K27ac,name="Peaks")
+peak_track_H3K9me3_NPC<-AnnotationTrack(peaks_NPC_H3K9me3,name="Peaks")
+
+library("TxDb.Mmusculus.UCSC.mm10.knownGene")
+tx<-GeneRegionTrack(TxDb.Mmusculus.UCSC.mm10.knownGene ,chromosome = "chr13",start  = 51700000, end= 51900000, name="Genes")
+
+tracks_list_NPC<-list(ideogram,cover_track_CTCF_NPC,peak_track_CTCF_NPC,cover_track_H3K27ac_NPC,peak_track_H3K27ac_NPC, cover_track_H3K9me3_NPC,peak_track_H3K9me3_NPC, tx, axis)
+```
+
+
+```{r,fig.cap= "**Figure x:** ChipSeq around Gadd55y in Neuronal Progenitor Cells, CTCF coverage tracks(blue), H3K27ac coverage tracks(light blue), H3K9me3 coverage tracks (dark blue)"}
+plotTracks(tracks_list_NPC,from = 51700000, to= 51900000, chromosome = "chr13",main= "ChipSeq around Gadd45y in Neuronal Progenitor Cells",cex.main=1.5)
+```
+
+
+```{r}
+
+peakAnno_NPC <- annotatePeak(peaks_NPC_CTCF, tssRegion=c(-3000, 3000), TxDb= TxDb.Mmusculus.UCSC.mm10.knownGene , annoDb="org.Mm.eg.db")
+
+
+peakAnnoList_NPC <- lapply(list(peaks_NPC_CTCF, peaks_NPC_H3H27ac, peaks_NPC_H3K9me3) ,annotatePeak, TxDb=TxDb.Mmusculus.UCSC.mm10.knownGene, tssRegion=c(-3000, 3000), verbose=FALSE)
+names(peakAnnoList_NPC) <- c("CTCF","H3K27ac", "H3K9me3")
+plotAnnoBar(peakAnnoList_NPC)
+plotDistToTSS(peakAnnoList_NPC)
+
+```
+
+

@@ -1,0 +1,110 @@
+---
+title: "ES_Gadd45"
+author: "Viviana"
+date: '2022-07-02'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+```{r, include=FALSE}
+suppressPackageStartupMessages({
+  library(AnnotationHub)
+  library(Rsubread)
+  library(rtracklayer)
+  library(Biostrings)
+  library(Rfastp)
+  library(epiwraps)
+  library(GEOquery)
+  library(GenomicRanges)
+  library(IRanges)
+  library(ChIPpeakAnno)
+  library(ggplot2)
+  library(gridExtra)
+
+})
+
+```
+
+
+```{r, include=FALSE}
+
+tracks_ES_CTCF<- rtracklayer::import("ES/tracks/GSE96107_ES_CTCF.bw")
+
+tracks_ES_H3K27ac<- rtracklayer::import('ES/tracks/ENCFF163HEV.bigWig')
+
+tracks_ES_H3K9me3<- rtracklayer::import('ES/tracks/ENCFF549VBE.bigWig')
+
+peaks_ES_CTCF<- rtracklayer::import('ES/peaks/GSE96107_ES_CTCF.IDR0.05.filt.narrowPeak')
+
+
+#download.file("https://www.encodeproject.org/files/ENCFF909QOC/@@download/ENCFF909QOC.bed.gz" , dest="ES/peaks/ES_H3K9me3.narrowPeak")
+
+#download.file("https://www.encodeproject.org/files/ENCFF519QMV/@@download/ENCFF519QMV.bed.gz" , dest="ES/peaks/ES_H3K27ac.narrowPeak")
+
+peaks_ES_H3K27ac <- rtracklayer::import('ES/peaks/ES_H3K27ac.narrowPeak')
+
+peaks_ES_H3K9me3<- rtracklayer::import('ES/peaks/ES_H3K9me3.narrowPeak')
+
+```
+
+
+
+```{r, include=TRUE, collapse=TRUE}
+library(Gviz)
+
+ideogram<- IdeogramTrack("chr13", "mm10")
+axis<- GenomeAxisTrack()
+
+cover_track_CTCF_ES<-DataTrack(tracks_ES_CTCF, window= 100000,type= "h", name="CTCF", col="blue",ylim = c(0,10))
+cover_track_H3K27ac_ES<-DataTrack(tracks_ES_H3K27ac, window= 100000,type= "h", name="H3K27ac", col="purple", ylim = c(0,10))
+cover_track_H3K9me3_ES<-DataTrack(tracks_ES_H3K9me3, window= 100000,type= "h", name="H3K9me3", col="pink", ylim = c(0,10) )
+peaks_chr13<- peaks_ES_CTCF[seqnames(peaks_ES_CTCF)=="chr13"]
+peak_track_CTCF_ES<-AnnotationTrack(peaks_chr13,name="Peaks")
+
+peak_track_H3K27ac_ES<-AnnotationTrack(peaks_ES_H3K27ac,name="Peaks")
+peaks_chr13_H3K9me3<- peaks_ES_H3K9me3[seqnames(peaks_ES_H3K9me3)=="chr13"]
+peak_track_H3K9me3_ES<-AnnotationTrack(peaks_chr13_H3K9me3,name="Peaks H3K9me3")
+
+
+
+library("TxDb.Mmusculus.UCSC.mm10.knownGene")
+tx<-GeneRegionTrack(TxDb.Mmusculus.UCSC.mm10.knownGene ,chromosome = "chr13",start  = 51700000, end= 51900000, name="Genes")
+
+tracks_list_ES<-list(ideogram, cover_track_CTCF_ES, peak_track_CTCF_ES, cover_track_H3K27ac_ES, peak_track_H3K27ac_ES, cover_track_H3K9me3_ES, peak_track_H3K9me3_ES, tx, axis)
+```
+
+
+```{r, include=TRUE, collapse=TRUE}
+plotTracks(tracks_list_ES,from = 51700000, to= 51900000, chromosome = "chr13",main= "ChipSeq around Gadd45y in Neuronal Progenitor Cells", cex.main=1.5)
+```
+
+
+```{r}
+# Profile of Chip Seq Binding to Promoters 
+library(ChIPseeker)
+promoter <- getPromoters(TxDb=TxDb.Mmusculus.UCSC.mm10.knownGene, upstream=3000, downstream=3000)
+#Matrix of Promoter and Peaks of CTCF 
+tagMatrix <- getTagMatrix(peaks_ES_CTCF, windows=promoter)
+##
+## to speed up the compilation of this vignettes, we use a precalculated tagMatrix
+data("tagMatrixList")
+tagMatrix <- tagMatrixList[[4]]
+tagHeatmap(tagMatrix, xlim=c(-3000, 3000), color="red",title = "Heatmap of ChIP CTCF peaks binding to TSS regions")
+
+library(org.Mm.eg.db)
+peakAnno <- annotatePeak(peaks_ES_CTCF, tssRegion=c(-3000, 3000), TxDb= TxDb.Mmusculus.UCSC.mm10.knownGene , annoDb="org.Mm.eg.db")
+
+Pie_ES_CTCF<- plotAnnoPie(peakAnno)
+
+plotDistToTSS(peakAnno,title="Distribution of transcription factor-binding loci\nrelative to TSS")
+
+
+peakAnnoList <- lapply(list(peaks_ES_CTCF, peaks_ES_H3K27ac, peaks_ES_H3K9me3) ,annotatePeak, TxDb=TxDb.Mmusculus.UCSC.mm10.knownGene, tssRegion=c(-3000, 3000), verbose=FALSE)
+names(peakAnnoList) <- c("CTCF","H3K27ac", "H3K9me3")
+plotAnnoBar(peakAnnoList)
+plotDistToTSS(peakAnnoList)
+
+```

@@ -1,0 +1,83 @@
+---
+title: "ES_CTCF_Gadd45y"
+author: "Viviana"
+date: '2022-07-01'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+#Analysis of CTCF binding in Gadd45y in Embrionic Stem Cells 
+
+```{r}
+
+suppressPackageStartupMessages({
+  library(AnnotationHub)
+  library(Rsubread)
+  library(rtracklayer)
+  library(Biostrings)
+  library(Rfastp)
+  library(epiwraps)
+  library(GEOquery)
+  library(GenomicRanges)
+  library(IRanges)
+  library(ChIPpeakAnno)
+  library(ggplot2)
+  library(gridExtra)
+
+})
+
+
+
+```
+
+
+```{r}
+getwd()
+
+tracks_ES_CTCF<- rtracklayer::import("ES/tracks/GSE96107_ES_CTCF.bw")
+```
+
+
+```{r}
+peaks_ES_CTCF<- rtracklayer::import('ES/peaks/GSE96107_ES_CTCF.IDR0.05.filt.narrowPeak')
+
+
+```
+
+
+```{r} 
+
+#just Playing with Overlaps 
+
+#length(peaks_NPC_CTCF)
+
+#overlapCN_NPC<-overlapsAny(peaks_CN_CTCF,peaks_NPC_CTCF)
+#table(overlapCN_NPC)
+
+#Overlapping<- subsetByOverlaps (peaks_CN_CTCF,peaks_NPC_CTCF)
+#length(Overlapping)
+```
+
+
+```{r}
+length(peaks_ES_CTCF)
+library(Gviz)
+
+
+ideogram<- IdeogramTrack("chr13", "mm10")
+axis<- GenomeAxisTrack()
+
+cover_track_CTCF_ES<-DataTrack(tracks_ES_CTCF, window= 100000,type= "h", name="Coverage")
+peaks_chr13<- peaks_ES_CTCF[seqnames(peaks_ES_CTCF)=="chr13"]
+peak_track_CTCF_ES<-AnnotationTrack(peaks_chr13,name="Peaks")
+#I wanted to also include the peaks but it was not possible due to the following message "Error: vector memory exhausted (limit reached?)"
+
+library("TxDb.Mmusculus.UCSC.mm10.knownGene")
+tx<-GeneRegionTrack(TxDb.Mmusculus.UCSC.mm10.knownGene, chromosome = "chr13",start  = 51799965, end= 51859475, name="Genes")
+
+plot_CTCF_ES<- plotTracks(list(ideogram,cover_track_CTCF_ES , peak_track_CTCF_ES, tx, axis),from = 51799965, to= 51859475, chromosome = "chr13",main= "CTCF binding around Gadd45 in ES", cex.main=1.5)
+
+```
+
